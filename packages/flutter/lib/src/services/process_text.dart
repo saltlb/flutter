@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/foundation.dart';
-
+import 'dart:convert'; // Pour convertir la réponse en Map si nécessaire
 import 'system_channels.dart';
 
 /// A data structure describing text processing actions.
@@ -112,24 +112,37 @@ class DefaultProcessTextService implements ProcessTextService {
   }
 
   @override
-  Future<List<ProcessTextAction>> queryTextActions() async {
-    final List<ProcessTextAction> textActions = <ProcessTextAction>[];
-    final Map<Object?, Object?>? rawResults;
+  
 
-    try {
-      rawResults = await _processTextChannel.invokeMethod(
-        'ProcessText.queryTextActions',
-      ) as Map<Object?, Object?>;
-    } catch (e) {
-      return textActions;
+Future<List<ProcessTextAction>> queryTextActions() async {
+  final List<ProcessTextAction> textActions = <ProcessTextAction>[];
+
+  try {
+    final dynamic result = await _processTextChannel.invokeMethod(
+      'ProcessText.queryTextActions',
+    );
+
+    // Vérifie si le résultat n'est pas null et est une Map
+    if (result != null && result is Map<Object?, Object?>) {
+      final Map<Object?, Object?> rawResults = result;
+
+      // Traiter chaque élément dans la Map
+      rawResults.forEach((key, value) {
+        // Vérifie que la clé est une String et la valeur est une String
+        if (key is String && value is String) {
+          // Crée un ProcessTextAction et l'ajoute à la liste textActions
+          textActions.add(ProcessTextAction(key, value));
+        }
+      });
     }
-
-    for (final Object? id in rawResults.keys) {
-      textActions.add(ProcessTextAction(id! as String, rawResults[id]! as String));
-    }
-
-    return textActions;
+  } catch (e) {
+    // En cas d'erreur, renvoie une liste vide
+    print('Erreur lors de la récupération des actions de texte: $e');
   }
+
+  return textActions;
+}
+
 
   @override
   /// On Android, the readOnly parameter might be used by the targeted activity, see:
